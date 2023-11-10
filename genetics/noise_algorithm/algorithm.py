@@ -9,8 +9,8 @@ from genetics.basics import GeneticAlgorithm, AlgorithmStateAdapter, Agent, Fitn
 class NoiseAlgorithm(GeneticAlgorithm):
     __population: List[Agent]
 
-    __fitnessFunctions: List[FitnessFunction]
-    __fitnessFunctionsWages: List[float]
+    __fitnessFunctions: List[FitnessFunction] = []
+    __fitnessFunctionsWages: List[float] = []
 
     __stateAdapter: AlgorithmStateAdapter
     __config: {} = {}
@@ -20,20 +20,20 @@ class NoiseAlgorithm(GeneticAlgorithm):
     __agentFactory: AgentFactory
 
     def __init__(
-        self,
-        reference: Reference,
-        stateAdapter: AlgorithmStateAdapter,
-        crosser: Crosser,
-        mutator: Mutator,
-        agentFactory: AgentFactory,
-        config: {}
+            self,
+            reference: Reference,
+            stateAdapter: AlgorithmStateAdapter,
+            crosser: Crosser,
+            mutator: Mutator,
+            agentFactory: AgentFactory,
+            config: {}
     ):
         self.__reference = reference
         self.__stateAdapter = stateAdapter
         self.__crosser = crosser
         self.__mutator = mutator
         self.__agentFactory = agentFactory
-        self.config = config
+        self.__config = config
 
         self.__initialize()
 
@@ -62,6 +62,9 @@ class NoiseAlgorithm(GeneticAlgorithm):
             if x % self.__config["savingFreq"] == 0:
                 self.save()
 
+            progress = x / self.__config["iterations"] * 100
+            print(f"{progress}%")
+
         self.__evaluateAgents()
 
     def __evaluateAgents(self) -> None:
@@ -85,5 +88,7 @@ class NoiseAlgorithm(GeneticAlgorithm):
 
     def __createInitialPopulation(self) -> None:
         population: List[Agent] = []
-        for x in range(self.__config["populationSize"]):
+        for x in range(int(self.__config["populationSize"])):
             population.append(self.__agentFactory.create())
+
+        self.__population = population

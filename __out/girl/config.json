@@ -1,0 +1,16 @@
+{
+  "iterations": 100,
+  "savingFreq": 10,
+  "crossoverChance": 0.8,
+  "crossoverPoints": 3,
+  "mutationChance": 0.0001,
+  "xMax": 0,
+  "yMax": 0,
+  "pointsMin": 15,
+  "pointsMax": 20,
+  "thresholdMin": 1,
+  "thresholdMax": 1,
+  "numberOfInterpolationPoints": 150,
+  "populationSize": 6000,
+  "alleleLength": 64
+}
