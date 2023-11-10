@@ -79,6 +79,7 @@ class _BezierCurve:
 
             x = a * p[0].getX() + b * p[1].getX() + c * p[2].getX() + d * p[3].getX()
             y = a * p[0].getY() + b * p[1].getY() + c * p[2].getY() + d * p[3].getY()
+
             return Point(x, y)
 
         # Higher order curves - use de Casteljau's computation
