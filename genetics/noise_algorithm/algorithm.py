@@ -52,6 +52,8 @@ class NoiseAlgorithm(GeneticAlgorithm):
             self.__population = self.__stateAdapter.load()
 
     def run(self) -> None:
+        self.save()
+
         for x in range(self.__config["iterations"]):
             self.__evaluateAgents()
             self.__crossoverAgents()
@@ -79,8 +81,7 @@ class NoiseAlgorithm(GeneticAlgorithm):
 
     def __mutateAgents(self) -> None:
         for agent in self.__population:
-            if self.__mutator.checkIfRun(agent):
-                self.__mutator.mutate(agent)
+            self.__mutator.mutate(agent)
 
     def __createInitialPopulation(self) -> None:
         population: List[Agent] = []

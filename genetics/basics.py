@@ -19,7 +19,7 @@ class Point:
 
 class Agent(ABC):
     @abstractmethod
-    def getPoints(self, step: float) -> List[Point]:
+    def getPoints(self) -> List[Point]:
         pass
 
     @abstractmethod
@@ -35,6 +35,26 @@ class Agent(ABC):
         pass
 
     @abstractmethod
+    def getLength(self) -> int:
+        pass
+
+    @abstractmethod
+    def getGeneticRepresentation(self) -> str:
+        pass
+
+    @abstractmethod
+    def setGeneticRepresentation(self, geneticRepresentation: str) -> None:
+        pass
+
+    @abstractmethod
+    def clone(self) -> "Agent":
+        pass
+
+    @abstractmethod
+    def getAlleleLength(self) -> int:
+        pass
+
+    @abstractmethod
     def toDictionary(self) -> {}:
         pass
 
@@ -47,17 +67,19 @@ class AgentFactory(ABC):
 
 class Reference(ABC):
     @abstractmethod
-    def getValueOnPoint(self, point: Point) -> int | float | None:
+    def getValueOnPoint(self, point: Point, threshold: int = 0) -> int | float:
         pass
 
     @abstractmethod
-    def setValueOnPoint(self, point: Point) -> int:
+    def setValueOnPoint(self, value: int | float, point: Point) -> None:
         pass
 
-
-class ReferenceFactory(ABC):
     @abstractmethod
-    def create(self) -> Reference:
+    def xMax(self) -> int:
+        pass
+
+    @abstractmethod
+    def yMax(self) -> int:
         pass
 
 
@@ -68,16 +90,19 @@ class Crosser(ABC):
         """Get Agents by the reference and perform cross over updating the Agent objects"""
         pass
 
+    @abstractmethod
     def checkIfRun(self, agents: List[Agent]) -> bool:
         pass
 
 
 class Mutator(ABC):
+    @abstractmethod
     def mutate(self, agent: Agent) -> None:
         """Get Agent by the reference and perform mutation updating the Agent object"""
         pass
 
-    def checkIfRun(self, agent: Agent) -> bool:
+    @abstractmethod
+    def checkIfMutateAgentBit(self, agent: Agent, bitIndex: int) -> bool:
         pass
 
 
