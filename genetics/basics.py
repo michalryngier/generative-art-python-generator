@@ -19,7 +19,11 @@ class Point:
 
 class Agent(ABC):
     @abstractmethod
-    def getPoints(self) -> List[Point]:
+    def getPointForT(self, t: float) -> Point:
+        pass
+
+    @abstractmethod
+    def getStep(self) -> float:
         pass
 
     @abstractmethod

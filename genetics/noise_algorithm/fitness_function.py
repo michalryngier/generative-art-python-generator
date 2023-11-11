@@ -1,4 +1,7 @@
 import math
+import time
+
+import numpy as np
 
 from genetics.basics import FitnessFunction, Agent, Reference
 
@@ -6,12 +9,14 @@ from genetics.basics import FitnessFunction, Agent, Reference
 class NoiseFitnessFunction(FitnessFunction):
     def evaluate(self, agent: Agent, reference: Reference) -> float:
         sumOfCoverage = 0
-        points = agent.getPoints()
+        step = agent.getStep()
+        arrange = np.arange(0, 1 + step, step)
 
-        for point in agent.getPoints():
-            if point.getX() > reference.xMax() or point.getY() > reference.yMax():
+        for t in arrange:
+            point = agent.getPointForT(t)
+            if point.getX() >= reference.xMax() or point.getY() >= reference.yMax():
                 return 0
 
             sumOfCoverage += reference.getValueOnPoint(point, agent.getThreshold())
 
-        return math.exp(-sumOfCoverage / len(points))
+        return np.exp(-(sumOfCoverage / len(arrange)))

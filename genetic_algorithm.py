@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from genetics.classes import JsonReference, RandomMainAgentFactory, JsonMainAgentStateAdapter
@@ -31,7 +32,7 @@ def main():
 def runForOne(directoryPath: Path, dirName: str):
     referencePath = f"{directoryPath}/reference.json"
     configPath = f"{directoryPath}/config.json"
-    stateFilesDir = f"{directoryPath.name}/__out"
+    stateFilesDir = f"{directoryPath}/__out_{time.time()}"
 
     if not os.path.exists(referencePath) or not os.path.isfile(referencePath):
         print(f"File does not exist {referencePath}")
@@ -41,7 +42,7 @@ def runForOne(directoryPath: Path, dirName: str):
         print(f"File does not exist {configPath}")
         sys.exit(1)
 
-    if not os.path.exists(configPath) or not os.path.isfile(configPath):
+    if not os.path.exists(stateFilesDir) or not os.path.isfile(stateFilesDir):
         os.makedirs(stateFilesDir)
 
     config = readConfig(configPath)

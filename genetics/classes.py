@@ -10,6 +10,7 @@ from textwrap import wrap
 import numpy as np
 
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
+from interpolate import interpolate
 
 
 class _BezierCurve:
@@ -33,61 +34,15 @@ class _BezierCurve:
 
         return _BezierCurve(start, end, points)
 
-    def interpolate(self, step: float) -> List[Point]:
-        points: List[Point] = []
-        for t in np.arange(0, 1 + step, step):
-            points.append(self.__interpolateForT(t))
+    def interpolateForT(self, t) -> Point:
+        points = [
+            [int(point.getX()), int(point.getY())]
+            for point in [self.__start] + self.__innerPoints + [self.__end]
+        ]
 
-        return points
+        x, y = interpolate(t, np.array(points, dtype=np.int32))
 
-    def __interpolateForT(self, t: float) -> Point:
-        points = [self.__start] + self.__innerPoints + [self.__end]
-
-        if t == 0:
-            return points[0]
-
-        order = len(points) - 1
-
-        if t == 1:
-            return points[order]
-
-        mt = 1 - t
-        p = points
-
-        # Linear curve
-        if order == 1:
-            x = mt * p[0].getX() + t * p[1].getX()
-            y = mt * p[0].getY() + t * p[1].getY()
-            return Point(x, y)
-
-        # Quadratic or cubic curve
-        if 2 <= order < 4:
-            mt2 = mt * mt
-            t2 = t * t
-            a, b, c, d = 0, 0, 0, 0
-
-            if order == 2:
-                p = [p[0], p[1], p[2], Point(0, 0)]
-                a = mt2
-                b = mt * t * 2
-                c = t2
-            else:
-                a = mt2 * mt
-                b = mt2 * t * 3
-                c = mt * t2 * 3
-                d = t * t2
-
-            x = a * p[0].getX() + b * p[1].getX() + c * p[2].getX() + d * p[3].getX()
-            y = a * p[0].getY() + b * p[1].getY() + c * p[2].getY() + d * p[3].getY()
-
-            return Point(x, y)
-
-        # Higher order curves - use de Casteljau's computation
-        dCpts = np.array([(p.getX(), p.getY()) for p in points])
-        while len(dCpts) > 1:
-            dCpts = (1 - t) * dCpts[:-1] + t * dCpts[1:]
-
-        return Point(float(dCpts[0][0]), float(dCpts[0][1]))
+        return Point(float(x), float(y))
 
     def getStartPoint(self) -> Point:
         return self.__start
@@ -107,7 +62,6 @@ class MainAgent(Agent):
     __numberOfInterpolationPoints: int
 
     __innerCurve: _BezierCurve
-    __innerCurveInterpolation: List[Point]
     __innerCurveDirty: bool = True
 
     def __init__(self, numberOfInterpolationPoints: int, threshold: int = 0, alleleLength: int = 64,
@@ -117,14 +71,16 @@ class MainAgent(Agent):
         self.__threshold = threshold
         self.__geneticRepresentation = geneticRepresentation
 
-    def getPoints(self) -> List[Point]:
+    def getPointForT(self, t: float) -> Point:
         if self.__innerCurveDirty:
             self.__innerCurve = _BezierCurve.fromGeneticRepresentation(self.__geneticRepresentation,
                                                                        self.__alleleLength)
-            self.__innerCurveInterpolation = self.__innerCurve.interpolate(1 / self.__numberOfInterpolationPoints)
             self.__innerCurveDirty = False
 
-        return self.__innerCurveInterpolation
+        return self.__innerCurve.interpolateForT(t)
+
+    def getStep(self) -> float:
+        return 1 / self.__numberOfInterpolationPoints
 
     def getThreshold(self) -> int:
         return self.__threshold
@@ -236,9 +192,7 @@ class JsonMainAgentStateAdapter(_JsonAgentStateAdapter):
         return agents
 
     def save(self, data: List[Agent]) -> None:
-        if self.hasState() is False:
-            return
-
+        self.setState(data)
         agentsData = [agent.toDictionary() for agent in self._state]
 
         with open(f"{self._dir}/{self._createNewStateFileName()}.json", 'w') as jsonFile:
@@ -265,8 +219,8 @@ class BaseCrosser(Crosser, ABC):
 
             gr1, gr2 = agent1.getGeneticRepresentation(), agent2.getGeneticRepresentation()
 
-            agent1.setGeneticRepresentation(self.__cross(gr1, gr2[:cuttingPoint], cuttingPoint))
-            agent2.setGeneticRepresentation(self.__cross(gr2, gr1[:cuttingPoint], cuttingPoint))
+            agent1.setGeneticRepresentation(self.__cross(gr1, gr2[cuttingPoint:], cuttingPoint))
+            agent2.setGeneticRepresentation(self.__cross(gr2, gr1[cuttingPoint:], cuttingPoint))
 
             iterator = nextIterator
 

@@ -1,3 +1,4 @@
+import time
 from typing import List
 import math
 import random
@@ -52,10 +53,10 @@ class NoiseAlgorithm(GeneticAlgorithm):
             self.__population = self.__stateAdapter.load()
 
     def run(self) -> None:
-        self.save()
-
         for x in range(self.__config["iterations"]):
+            start = time.time()
             self.__evaluateAgents()
+            print(f"evaluated in: {time.time() - start}")
             self.__crossoverAgents()
             self.__mutateAgents()
 
@@ -68,12 +69,16 @@ class NoiseAlgorithm(GeneticAlgorithm):
         self.__evaluateAgents()
 
     def __evaluateAgents(self) -> None:
+        start = time.time()
+
         for agent in self.__population:
             eval = 0
             for index, fitnessFunc in enumerate(self.__fitnessFunctions):
                 eval += fitnessFunc.evaluate(agent, self.__reference) * self.__fitnessFunctionsWages[index]
 
             agent.setEvaluationValue(eval)
+        print(time.time() - start)
+
 
     def __crossoverAgents(self) -> None:
         divider = 2

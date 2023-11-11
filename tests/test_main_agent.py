@@ -34,16 +34,6 @@ class Test_BezierCurve(unittest.TestCase):
         self.assertEqual(curve.getInnerPoints()[1].getX(), 0)
         self.assertEqual(curve.getInnerPoints()[1].getY(), 1)
 
-    def test_interpolate_shouldHaveValidNumberOfPoints(self):
-        curve1 = _BezierCurve(Point(0, 1), Point(0, 1), [Point(0, 1)])
-        curve2 = _BezierCurve(Point(0, 1), Point(0, 1), [Point(0, 1)])
-
-        result1 = curve1.interpolate(0.1)
-        result2 = curve2.interpolate(0.002)
-
-        self.assertEqual(len(result1), 11)
-        self.assertEqual(len(result2), 1 / 0.002 + 1)  # always must have one more due to inclusive range from 0 to 1
-
 
 if __name__ == '__main__':
     unittest.main()
