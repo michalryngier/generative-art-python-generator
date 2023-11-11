@@ -69,7 +69,6 @@ class NoiseAlgorithm(GeneticAlgorithm):
         self.__evaluateAgents()
 
     def __evaluateAgents(self) -> None:
-        start = time.time()
 
         for agent in self.__population:
             eval = 0
@@ -77,7 +76,6 @@ class NoiseAlgorithm(GeneticAlgorithm):
                 eval += fitnessFunc.evaluate(agent, self.__reference) * self.__fitnessFunctionsWages[index]
 
             agent.setEvaluationValue(eval)
-        print(time.time() - start)
 
 
     def __crossoverAgents(self) -> None:

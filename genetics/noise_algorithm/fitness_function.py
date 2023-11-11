@@ -1,6 +1,3 @@
-import math
-import time
-
 import numpy as np
 
 from genetics.basics import FitnessFunction, Agent, Reference

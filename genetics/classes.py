@@ -6,11 +6,14 @@ import uuid
 from abc import ABC
 from typing import List
 from textwrap import wrap
-import numpy as np
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
 import ctypes
+import numpy as np
 
-lib = ctypes.CDLL('./../interpolate/interpolate.so')
+interpolate = ctypes.CDLL('./interpolate/interpolate.so')
+interpolate_function = interpolate.interpolate
+interpolate_function.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+interpolate_function.restype = ctypes.POINTER(ctypes.c_double)
 
 
 class _BezierCurve:
@@ -35,14 +38,22 @@ class _BezierCurve:
         return _BezierCurve(start, end, points)
 
     def interpolateForT(self, t) -> Point:
+
+        start = time.time()
         points = [
             [int(point.getX()), int(point.getY())]
             for point in [self.__start] + self.__innerPoints + [self.__end]
         ]
+        print(f"interpolation took: {time.time() - start}")
+        size = len(points)
 
-        x, y = lib.interpolate(t, points)
+        c_points = (ctypes.c_double * (2 * size))(*[item for sublist in points for item in sublist])
 
-        return Point(float(x), float(y))
+        result_pointer = interpolate_function(t, c_points, size)
+
+        result = [result_pointer[i] for i in range(2)]
+
+        return Point(result[0], result[1])
 
     def getStartPoint(self) -> Point:
         return self.__start
