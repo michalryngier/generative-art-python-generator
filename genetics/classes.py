@@ -6,11 +6,11 @@ import uuid
 from abc import ABC
 from typing import List
 from textwrap import wrap
-
 import numpy as np
-
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
-from interpolate import interpolate
+import ctypes
+
+lib = ctypes.CDLL('./../interpolate/interpolate.so')
 
 
 class _BezierCurve:
@@ -40,7 +40,7 @@ class _BezierCurve:
             for point in [self.__start] + self.__innerPoints + [self.__end]
         ]
 
-        x, y = interpolate(t, np.array(points, dtype=np.int32))
+        x, y = lib.interpolate(t, points)
 
         return Point(float(x), float(y))
 
