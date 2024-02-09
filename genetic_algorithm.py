@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from pathlib import Path
+import shutil
 
 from genetics.classes import JsonReference, RandomMainAgentFactory, JsonMainAgentStateAdapter
 from genetics.noise_algorithm.algorithm import NoiseAlgorithm
@@ -32,7 +33,7 @@ def main():
 def runForOne(directoryPath: Path, dirName: str):
     referencePath = f"{directoryPath}/reference.json"
     configPath = f"{directoryPath}/config.json"
-    stateFilesDir = f"{directoryPath}/__out_{time.time()}"
+    stateFilesDir = f"{directoryPath}/__out_{int(time.time())}"
 
     if not os.path.exists(referencePath) or not os.path.isfile(referencePath):
         print(f"File does not exist {referencePath}")
@@ -45,6 +46,7 @@ def runForOne(directoryPath: Path, dirName: str):
     if not os.path.exists(stateFilesDir) or not os.path.isfile(stateFilesDir):
         os.makedirs(stateFilesDir)
 
+    shutil.copyfile(configPath, f"{stateFilesDir}/config.json")
     config = readConfig(configPath)
 
     reference = JsonReference(referencePath)
@@ -64,7 +66,9 @@ def runForOne(directoryPath: Path, dirName: str):
 
     algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config)
     algorithm.addFitnessFunction(NoiseFitnessFunction(), 1)
+    start = time.time()
     algorithm.run()
+    print(f"time: {time.time() - start}")
     algorithm.save()
 
 

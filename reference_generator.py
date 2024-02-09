@@ -9,7 +9,7 @@ outPath = f"{main_directory}/__out"
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python reference_generator.py filepath")
+        print("Usage: python reference_generator.py [filepath] [?cannySigma] [?blurSigma]")
         sys.exit(1)
 
     # Required

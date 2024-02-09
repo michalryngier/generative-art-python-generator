@@ -11,9 +11,13 @@ class NoiseFitnessFunction(FitnessFunction):
 
         for t in arrange:
             point = agent.getPointForT(t)
-            if point.getX() >= reference.xMax() or point.getY() >= reference.yMax():
+            x = point.getX()
+            y = point.getY()
+            if x >= reference.xMax() or y >= reference.yMax():
+                return 0
+            if x <= 0 or y <= 0:
                 return 0
 
-            sumOfCoverage += reference.getValueOnPoint(point, agent.getThreshold())
+            sumOfCoverage += reference.getValueOnPoint(point, agent.getThreshold()) / 1
 
-        return np.exp(-(sumOfCoverage / len(arrange)))
+        return np.exp(-sumOfCoverage)

@@ -27,6 +27,10 @@ class Agent(ABC):
         pass
 
     @abstractmethod
+    def setStep(self, step: float) -> None:
+        pass
+
+    @abstractmethod
     def getThreshold(self) -> int:
         pass
 
@@ -56,6 +60,10 @@ class Agent(ABC):
 
     @abstractmethod
     def getAlleleLength(self) -> int:
+        pass
+
+    @abstractmethod
+    def setAlleleLength(self, length: int) -> None:
         pass
 
     @abstractmethod
@@ -106,7 +114,7 @@ class Mutator(ABC):
         pass
 
     @abstractmethod
-    def checkIfMutateAgentBit(self, agent: Agent, bitIndex: int) -> bool:
+    def checkIfMutateAgentBit(self, agent: Agent) -> bool:
         pass
 
 
@@ -126,7 +134,7 @@ class AlgorithmStateAdapter(ABC):
         pass
 
     @abstractmethod
-    def load(self) -> List[Agent]:
+    def load(self, index: int = None) -> List[Agent]:
         pass
 
     @abstractmethod

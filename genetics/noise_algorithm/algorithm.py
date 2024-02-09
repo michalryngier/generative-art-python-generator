@@ -1,7 +1,8 @@
-import time
 from typing import List
 import math
 import random
+
+import numpy as np
 
 from genetics.basics import GeneticAlgorithm, AlgorithmStateAdapter, Agent, FitnessFunction, Reference, Crosser, \
     Mutator, AgentFactory
@@ -46,37 +47,53 @@ class NoiseAlgorithm(GeneticAlgorithm):
         self.__fitnessFunctionsWages.append(wage)
 
     def save(self) -> None:
-        self.__stateAdapter.save(self.__population)
+        self.__stateAdapter.save([agent.clone() for agent in self.__population])
 
     def load(self, algorithmState: AlgorithmStateAdapter) -> None:
         if self.__stateAdapter.hasState():
             self.__population = self.__stateAdapter.load()
 
     def run(self) -> None:
-        for x in range(self.__config["iterations"]):
-            start = time.time()
+        iterations = self.__config["iterations"]
+
+        for x in range(iterations):
             self.__evaluateAgents()
-            print(f"evaluated in: {time.time() - start}")
-            self.__crossoverAgents()
-            self.__mutateAgents()
 
             if x % self.__config["savingFreq"] == 0:
                 self.save()
 
-            progress = x / self.__config["iterations"] * 100
+            self.__sortAgents()
+            self.__normalizeAgents()
+
+            self.__crossoverAgents()
+            self.__mutateAgents()
+
+            progress = round(x / iterations * 100, 2)
             print(f"{progress}%")
 
         self.__evaluateAgents()
 
-    def __evaluateAgents(self) -> None:
+    def __sortAgents(self, ) -> None:
+        self.__population = sorted(self.__population, key=lambda x: x.getEvaluationValue(), reverse=True)
 
+    def __normalizeAgents(self) -> None:
+        fitnessScores = np.array([agent.getEvaluationValue() for agent in self.__population])
+        minScore = fitnessScores[0]
+        maxScore = fitnessScores[-1]
+
+        for agent in self.__population:
+            newScore = 1
+            if minScore != maxScore:
+                newScore = abs((agent.getEvaluationValue() - minScore) / (maxScore - minScore))
+
+            agent.setEvaluationValue(newScore)
+
+    def __evaluateAgents(self) -> None:
         for agent in self.__population:
             eval = 0
             for index, fitnessFunc in enumerate(self.__fitnessFunctions):
-                eval += fitnessFunc.evaluate(agent, self.__reference) * self.__fitnessFunctionsWages[index]
-
+                eval += self.__fitnessFunctionsWages[index] * fitnessFunc.evaluate(agent, self.__reference)
             agent.setEvaluationValue(eval)
-
 
     def __crossoverAgents(self) -> None:
         divider = 2

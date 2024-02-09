@@ -6,63 +6,53 @@ import uuid
 from abc import ABC
 from typing import List
 from textwrap import wrap
+
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
 import ctypes
 import numpy as np
 
-interpolate = ctypes.CDLL('./interpolate/interpolate.so')
-interpolate_function = interpolate.interpolate
+interpolateLib = ctypes.CDLL('./image/interpolate/interpolate.so')
+interpolate_function = interpolateLib.interpolate
 interpolate_function.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
 interpolate_function.restype = ctypes.POINTER(ctypes.c_double)
 
 
 class _BezierCurve:
-    __start: Point
-    __end: Point
-    __innerPoints: List[Point]
-    __alleleLength: int
+    __cPoints: ctypes.Array
+    __points: List[List[int | int]]
+    __pointsSize: int
 
-    def __init__(self, start: Point, end: Point, points: List[Point]):
-        self.__start = start
-        self.__end = end
-        self.__innerPoints = points
+    def __init__(self, start: [int | int], end: [int | int], innerRawPoints: List[List[int | int]]):
+        self.__points = [start] + innerRawPoints + [end]
+        self.__cPoints = self.__convertPointsToCDouble(self.__points)
+        self.__pointsSize = len(self.__points)
+
+    def __convertPointsToCDouble(self, points: List[List[int | int]]) -> ctypes.Array:
+        return (ctypes.c_double * (2 * len(points)))(*[item for sublist in points for item in sublist])
 
     @classmethod
     def fromGeneticRepresentation(cls, genetic: str, alleleLength: int) -> "_BezierCurve":
         numericSystem = 2
         chunks: List[str] = wrap(genetic, alleleLength)
-        start = Point(int(chunks.pop(0), numericSystem), int(chunks.pop(0), numericSystem))
-        end = Point(int(chunks.pop(0), numericSystem), int(chunks.pop(0), numericSystem))
-        points = [Point(int(x, numericSystem), int(y, numericSystem)) for x, y in zip(chunks[::2], chunks[1::2])]
+        start = [int(chunks.pop(0), numericSystem), int(chunks.pop(0), numericSystem)]
+        end = [int(chunks.pop(0), numericSystem), int(chunks.pop(0), numericSystem)]
+        points = [[int(x, numericSystem), int(y, numericSystem)] for x, y in zip(chunks[::2], chunks[1::2])]
 
         return _BezierCurve(start, end, points)
 
     def interpolateForT(self, t) -> Point:
+        if t == 0:
+            return Point(self.__points[0][0], self.__points[0][1])
+        if t == 1:
+            return Point(self.__points[-1][0], self.__points[-1][1])
 
-        start = time.time()
-        points = [
-            [int(point.getX()), int(point.getY())]
-            for point in [self.__start] + self.__innerPoints + [self.__end]
-        ]
-        print(f"interpolation took: {time.time() - start}")
-        size = len(points)
+        points = self.__cPoints
+        resultPointer = interpolate_function(t, points, self.__pointsSize)
+        result = [resultPointer[i] for i in range(2)]
 
-        c_points = (ctypes.c_double * (2 * size))(*[item for sublist in points for item in sublist])
-
-        result_pointer = interpolate_function(t, c_points, size)
-
-        result = [result_pointer[i] for i in range(2)]
+        interpolateLib.reset(resultPointer)
 
         return Point(result[0], result[1])
-
-    def getStartPoint(self) -> Point:
-        return self.__start
-
-    def getEndPoint(self) -> Point:
-        return self.__end
-
-    def getInnerPoints(self) -> List[Point]:
-        return self.__innerPoints
 
 
 class MainAgent(Agent):
@@ -71,27 +61,39 @@ class MainAgent(Agent):
     __alleleLength: int
     __threshold: int
     __numberOfInterpolationPoints: int
-
     __innerCurve: _BezierCurve
-    __innerCurveDirty: bool = True
+    __innerCurveDirty = False
+    __step: float = None
 
     def __init__(self, numberOfInterpolationPoints: int, threshold: int = 0, alleleLength: int = 64,
                  geneticRepresentation: str = ''):
         self.__numberOfInterpolationPoints = numberOfInterpolationPoints
         self.__alleleLength = alleleLength
         self.__threshold = threshold
-        self.__geneticRepresentation = geneticRepresentation
+        self.setGeneticRepresentation(geneticRepresentation)
 
     def getPointForT(self, t: float) -> Point:
         if self.__innerCurveDirty:
-            self.__innerCurve = _BezierCurve.fromGeneticRepresentation(self.__geneticRepresentation,
-                                                                       self.__alleleLength)
-            self.__innerCurveDirty = False
+            self.__updateInnerCurve()
 
         return self.__innerCurve.interpolateForT(t)
 
+    def __updateInnerCurve(self):
+        self.__innerCurve = _BezierCurve.fromGeneticRepresentation(
+            self.__geneticRepresentation,
+            self.__alleleLength
+        )
+        self.__innerCurveDirty = False
+
     def getStep(self) -> float:
-        return 1 / self.__numberOfInterpolationPoints
+        if self.__step is None:
+            self.__step = 1 / self.__numberOfInterpolationPoints
+
+        return self.__step
+
+    def setStep(self, step: float) -> None:
+        self.__step = step
+        self.__numberOfInterpolationPoints = round(1 / step)
 
     def getThreshold(self) -> int:
         return self.__threshold
@@ -106,8 +108,8 @@ class MainAgent(Agent):
         return self.__geneticRepresentation
 
     def setGeneticRepresentation(self, geneticRepresentation: str) -> None:
-        self.__innerCurveDirty = True
         self.__geneticRepresentation = geneticRepresentation
+        self.__innerCurveDirty = True
 
     def getLength(self) -> int:
         return len(self.__geneticRepresentation)
@@ -122,13 +124,16 @@ class MainAgent(Agent):
     def getAlleleLength(self) -> int:
         return self.__alleleLength
 
+    def setAlleleLength(self, length: int) -> None:
+        self.__alleleLength = length
+
     def toDictionary(self) -> {}:
         return {
             "eval": self.__eval,
             "geneticRepresentation": self.__geneticRepresentation,
-            "alleleLength": self.__alleleLength,
-            "threshold": self.__threshold,
-            "numberOfInterpolationPoints": self.__numberOfInterpolationPoints,
+            "alleleLength": int(self.__alleleLength),
+            "threshold": int(self.__threshold),
+            "numberOfInterpolationPoints": int(self.__numberOfInterpolationPoints),
         }
 
 
@@ -137,7 +142,7 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
     _filePrefix: str
     _dir: str
 
-    def __init__(self, directory: str, prefix: str, ):
+    def __init__(self, directory: str, prefix: str):
         self._dir = directory
         self._filePrefix = prefix
 
@@ -150,13 +155,7 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
     def _getStateFileContent(self, path: str) -> List:
         try:
             with open(path, 'r') as jsonFile:
-                # Load the JSON data from the file into a Python dictionary
-                data_dict = json.load(jsonFile)
-
-                # Now, 'data_dict' contains the contents of the JSON file as a dictionary
-                print("Contents of the JSON file:")
-                print(data_dict)
-
+                return json.load(jsonFile)
         except FileNotFoundError:
             print(f"The file '{path}' was not found.")
         except json.JSONDecodeError as e:
@@ -164,16 +163,23 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
         except Exception as e:
             print(f"An error occurred: {e}")
 
-        return json.load(jsonFile)
-
-    def _getLatestStateFileName(self) -> str | None:
+    def _getStateFileNames(self) -> List[str] | None:
         files = [f for f in os.listdir(self._dir) if os.path.isfile(os.path.join(self._dir, f))]
 
         if not files:
             return None
 
-        filePathsAndTimes = [(os.path.join(self._dir, f), os.path.getmtime(os.path.join(self._dir, f))) for f in
-                             files]
+        files = filter(lambda x: x != 'config.json', files)
+
+        return sorted([os.path.join(self._dir, f) for f in files], key=lambda f: os.path.getctime(f))
+
+    def _getLatestStateFileName(self) -> str | None:
+        files = self._getStateFileNames()
+
+        if not files:
+            return None
+
+        filePathsAndTimes = [(f, os.path.getmtime(os.path.join(self._dir, f))) for f in files]
 
         return max(filePathsAndTimes, key=lambda x: x[1])[0]
 
@@ -185,18 +191,31 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
 
 
 class JsonMainAgentStateAdapter(_JsonAgentStateAdapter):
-    def load(self) -> List[Agent]:
+    def load(self, index: int = None) -> List[Agent]:
         agents: List[Agent] = []
-        latestFileName = self._getLatestStateFileName()
+        latestFileName = None
+
+        if index is not None:
+            fileNames = self._getStateFileNames()
+            if len(fileNames) > index:
+                latestFileName = fileNames[index]
+            else:
+                return agents
+
+        if latestFileName is None:
+            latestFileName = self._getLatestStateFileName()
 
         if latestFileName is None:
             return agents
 
         stateRawList = self._getStateFileContent(latestFileName)
 
+        if stateRawList is None:
+            return agents
+
         for rawAgentData in stateRawList:
             agent = MainAgent(rawAgentData["numberOfInterpolationPoints"], rawAgentData["threshold"],
-                              rawAgentData["alleleLength"], rawAgentData("geneticRepresentation"))
+                              rawAgentData["alleleLength"], rawAgentData["geneticRepresentation"])
             agent.setEvaluationValue(rawAgentData["eval"])
             agents.append(agent)
 
@@ -251,11 +270,15 @@ class BaseMutator(Mutator, ABC):
         geneticRepresentation = agent.getGeneticRepresentation()
         newGeneticRepresentation = ''
 
-        for index, bit in enumerate(geneticRepresentation):
-            if self.checkIfMutateAgentBit(agent, index):
-                bit = "1" if bit == "0" else "0"
-
-            newGeneticRepresentation += bit
+        for index, char in enumerate(geneticRepresentation):
+            segmentSize = agent.getAlleleLength()
+            if self._significantAlleles >= (index % (segmentSize - 1)):
+                if self.checkIfMutateAgentBit(agent):
+                    newGeneticRepresentation += '1' if char == '0' else '0'
+                else:
+                    newGeneticRepresentation += char
+            else:
+                newGeneticRepresentation += char
 
         agent.setGeneticRepresentation(newGeneticRepresentation)
 
@@ -343,12 +366,12 @@ class JsonReference(Reference):
 
     def __getNeumannAverage(self, x: int, y: int, threshold: int) -> float:
         height, width = self.yMax(), self.xMax()
-        points = np.array(self.__pointsValues)
+        points = self.__npPointsValues
 
-        y_range = slice(max(0, y - threshold), min(height, y + threshold + 1))
-        x_range = slice(max(0, x - threshold), min(width, x + threshold + 1))
+        yRange = slice(max(0, y - threshold), min(height, y + threshold + 1))
+        xRange = slice(max(0, x - threshold), min(width, x + threshold + 1))
 
-        neighbors = points[y_range, x_range].flatten()
+        neighbors = points[yRange, xRange].flatten()
 
         return np.mean(neighbors) if neighbors.size > 0 else 0.
 
@@ -364,6 +387,7 @@ class JsonReference(Reference):
 
                 if isinstance(pointsValues, list):
                     self.__pointsValues = [[float(value) for value in row] for row in pointsValues]
+                    self.__npPointsValues = np.array(self.__pointsValues)
                 else:
                     print("Error: 'pointsValues' in JSON file is not an array.")
             else:

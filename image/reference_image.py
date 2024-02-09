@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import List
 
+import numpy as np
 from skimage import io, color, feature, exposure
 from skimage.filters import gaussian
 from skimage.util import img_as_ubyte
@@ -26,19 +27,22 @@ class EdgeMatrixCreator:
         if blur:
             edges = gaussian(edges, sigma=blurSigma)
 
+        edges = edges / np.max(edges)
+        edges[edges >= 0.25] = 1
+
         io.imsave(self.__outputPath, img_as_ubyte(edges))
 
     def createReferenceJson(self, path: Path):
         image = io.imread(self.__outputPath)
         height, width = image.shape[:2]
-        normalizedImage = exposure.rescale_intensity(image, in_range='image', out_range=(0, 1))
 
         referenceData: List[List[float]] = []
 
-        for row in normalizedImage:
+        for row in image:
             columnValues = []
             for column in row:
-                columnValues.append(column)
+                bwValue = column / 255
+                columnValues.append(bwValue)
             referenceData.append(columnValues)
 
         with open(path, 'w') as jsonFile:
