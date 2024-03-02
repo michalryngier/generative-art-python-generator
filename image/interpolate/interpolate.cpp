@@ -1,14 +1,16 @@
 #include <array>
 #include <cstdlib>
 #include <vector>
+
 extern "C" {
 double* interpolate(double t, double points[][2], int size)
 {
     int order = size - 1;
-    double mt = 1 - t
+    double mt = 1 - t;
 
-    std::vector<std::array<double, 2>> p;
+    std::vector<std::array<double, 2> > p;
     p.reserve(size);
+
     for (int i = 0; i < size; ++i) {
         std::array<double, 2> pointArray = { points[i][0], points[i][1] };
         p.push_back(pointArray);
@@ -24,7 +26,7 @@ double* interpolate(double t, double points[][2], int size)
         double t2 = t * t;
         double a, b, c, d = 0;
         if (order == 2) {
-            p = { p[0], p[1], p[2], { 0, 0 } };
+            p = {p[0], p[1], p[2], { 0, 0 }};
             a = mt2;
             b = mt * t * 2;
             c = t2;
@@ -40,7 +42,7 @@ double* interpolate(double t, double points[][2], int size)
 
         return res;
     }
-    std::vector<std::array<double, 2>> dCpts;
+    std::vector<std::array<double, 2> > dCpts;
     dCpts.reserve(size);
     for (int i = 0; i < size; ++i) {
         std::array<double, 2> pointArray = { points[i][0], points[i][1] };
@@ -66,11 +68,4 @@ void reset(double* pkt)
 {
     free(pkt);
 }
-}
-
-#include "nbind/nbind.h"
-
-NBIND_CLASS(Greeter) {
-  method(interpolate);
-  method(reset);
 }

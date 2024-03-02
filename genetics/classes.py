@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import time
@@ -6,6 +7,8 @@ import uuid
 from abc import ABC
 from typing import List
 from textwrap import wrap
+
+from Cython.Shadow import _ArrayType
 
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
 import ctypes
@@ -284,14 +287,14 @@ class BaseMutator(Mutator, ABC):
 
 
 class RandomMainAgentFactory(AgentFactory):
-    __xMax: int
-    __yMax: int
-    __pointsMin: int
-    __pointsMax: int
-    __thresholdMin: int
-    __thresholdMax: int
-    __alleleLength: int
-    __numberOfInterpolationPoints: int
+    _xMax: int
+    _yMax: int
+    _pointsMin: int
+    _pointsMax: int
+    _thresholdMin: int
+    _thresholdMax: int
+    _alleleLength: int
+    _numberOfInterpolationPoints: int
 
     def __init__(
             self,
@@ -304,42 +307,73 @@ class RandomMainAgentFactory(AgentFactory):
             alleleLength: int,
             numberOfInterpolationPoints: int
     ):
-        self.__xMax = xMax
-        self.__yMax = yMax
-        self.__pointsMin = pointsMin
-        self.__pointsMax = pointsMax
-        self.__thresholdMin = thresholdMin
-        self.__thresholdMax = thresholdMax
-        self.__alleleLength = alleleLength
-        self.__numberOfInterpolationPoints = numberOfInterpolationPoints
+        self._xMax = xMax
+        self._yMax = yMax
+        self._pointsMin = pointsMin
+        self._pointsMax = pointsMax
+        self._thresholdMin = thresholdMin
+        self._thresholdMax = thresholdMax
+        self._alleleLength = alleleLength
+        self._numberOfInterpolationPoints = numberOfInterpolationPoints
 
     def create(self) -> Agent:
-        numberOfPoints = random.randint(self.__pointsMin, self.__pointsMax)
-        innerPoints = [self.__createRandomPointGeneticRepresentation() for _ in range(numberOfPoints)]
-        geneticRepresentation = (self.__createRandomPointGeneticRepresentation() +
-                                 self.__createRandomPointGeneticRepresentation() +
+        numberOfPoints = random.randint(self._pointsMin, self._pointsMax)
+        innerPoints = [self._createRandomPointGeneticRepresentation() for _ in range(numberOfPoints)]
+        geneticRepresentation = (self._createRandomPointGeneticRepresentation() +
+                                 self._createRandomPointGeneticRepresentation() +
                                  ''.join(innerPoints))
-        threshold = random.randint(self.__thresholdMin, self.__thresholdMax)
+        threshold = random.randint(self._thresholdMin, self._thresholdMax)
 
         return MainAgent(
-            self.__numberOfInterpolationPoints,
+            self._numberOfInterpolationPoints,
             threshold,
-            self.__alleleLength,
+            self._alleleLength,
             geneticRepresentation
         )
 
-    def __createRandomPointGeneticRepresentation(self) -> str:
-        return self.__createBinaryString(random.randint(0, self.__xMax)) + self.__createBinaryString(
-            random.randint(0, self.__yMax))
+    def _createRandomPointGeneticRepresentation(self) -> str:
+        return self._createBinaryString(random.randint(0, self._xMax)) + self._createBinaryString(
+            random.randint(0, self._yMax))
 
-    def __createBinaryString(self, value: int) -> str:
+    def _createBinaryString(self, value: int) -> str:
         binaryStr = bin(value)[2:]
 
-        return binaryStr.rjust(self.__alleleLength, '0')
+        return binaryStr.rjust(self._alleleLength, '0')
+
+
+class ClosePositionMainAgentFactory(RandomMainAgentFactory):
+    __startPositionRadius: int
+
+    def __init__(
+            self,
+            xMax: int,
+            yMax: int,
+            pointsMin: int,
+            pointsMax: int,
+            thresholdMin: int,
+            thresholdMax: int,
+            alleleLength: int,
+            numberOfInterpolationPoints: int,
+            startPositionRadius: int
+    ):
+        super().__init__(xMax, yMax, pointsMin, pointsMax, thresholdMin, thresholdMax, alleleLength,
+                         numberOfInterpolationPoints)
+        self.__startPositionRadius = startPositionRadius
+
+    def _createRandomPointGeneticRepresentation(self) -> str:
+        startX, startY = (random.randint(0, self._xMax), random.randint(0, self._yMax))
+        angle = random.uniform(0, 2 * math.pi)
+        randomRadius = random.uniform(0, self.__startPositionRadius)
+        x = int(startX + randomRadius * math.cos(angle))
+        y = int(startY + randomRadius * math.sin(angle))
+        x = max(0, min(x, self._xMax))
+        y = max(0, min(y, self._yMax))
+
+        return self._createBinaryString(int(x)) + self._createBinaryString(int(y))
 
 
 class JsonReference(Reference):
-    __pointsValues = List[List[float]]
+    __pointsValues: np.ndarray
     __filePath: str
 
     def __init__(self, filePath):
@@ -347,16 +381,16 @@ class JsonReference(Reference):
         self.__getDataFromFile()
 
     def getValueOnPoint(self, point: Point, threshold: int = 0) -> int | float:
+        x, y = point.getX(), point.getY()
         if threshold > 0:
-            return self.__getNeumannAverage(point.getX(), point.getY(), threshold)
+            return self.__getNeumannAverage(x, y, threshold)
 
-        return self.__pointsValues[point.getY()][point.getX()]
+        return float(self.__pointsValues[y, x])
 
     def setValueOnPoint(self, value: float, point: Point) -> None:
-        if point.getX() > self.__xMax or point.getY() > self.__yMax:
-            return
-
-        self.__pointsValues[point.getY()][point.getX()] = value
+        x, y = point.getX(), point.getY()
+        if 0 <= x <= self.__xMax and 0 <= y <= self.__yMax:
+            self.__pointsValues[y, x] = value
 
     def xMax(self) -> int:
         return self.__xMax
@@ -365,15 +399,12 @@ class JsonReference(Reference):
         return self.__yMax
 
     def __getNeumannAverage(self, x: int, y: int, threshold: int) -> float:
-        height, width = self.yMax(), self.xMax()
-        points = self.__npPointsValues
+        yMin, yMax = max(0, y - threshold), min(self.yMax(), y + threshold + 1)
+        xMin, xMax = max(0, x - threshold), min(self.xMax(), x + threshold + 1)
 
-        yRange = slice(max(0, y - threshold), min(height, y + threshold + 1))
-        xRange = slice(max(0, x - threshold), min(width, x + threshold + 1))
+        neighbors = self.__pointsValues[yMin:yMax, xMin:xMax].flatten()
 
-        neighbors = points[yRange, xRange].flatten()
-
-        return np.mean(neighbors) if neighbors.size > 0 else 0.
+        return np.mean(neighbors) if neighbors.size > 0 else 0.0
 
     def __getDataFromFile(self) -> None:
         try:
@@ -386,8 +417,8 @@ class JsonReference(Reference):
                 self.__yMax = data['yMax']
 
                 if isinstance(pointsValues, list):
-                    self.__pointsValues = [[float(value) for value in row] for row in pointsValues]
-                    self.__npPointsValues = np.array(self.__pointsValues)
+                    self.__pointsValues = np.array(data['pointsValues'], dtype=float)
+                    self.__yMax, self.__xMax = self.__pointsValues.shape[0] - 1, self.__pointsValues.shape[1] - 1
                 else:
                     print("Error: 'pointsValues' in JSON file is not an array.")
             else:

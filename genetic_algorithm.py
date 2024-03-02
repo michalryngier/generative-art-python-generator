@@ -2,10 +2,12 @@ import json
 import os
 import sys
 import time
+from multiprocessing import Pool
 from pathlib import Path
 import shutil
 
-from genetics.classes import JsonReference, RandomMainAgentFactory, JsonMainAgentStateAdapter
+from genetics.classes import JsonReference, RandomMainAgentFactory, JsonMainAgentStateAdapter, \
+    ClosePositionMainAgentFactory
 from genetics.noise_algorithm.algorithm import NoiseAlgorithm
 from genetics.noise_algorithm.crosser import NoiseCrosser
 from genetics.noise_algorithm.fitness_function import NoiseFitnessFunction
@@ -17,7 +19,7 @@ outPath = f"{main_directory}/__out"
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python genetic_algorithm.py filename")
+        print("Usage: python genetic_algorithm.py [filename]")
         sys.exit(1)
 
     dirName = str(sys.argv[1])
@@ -50,21 +52,22 @@ def runForOne(directoryPath: Path, dirName: str):
     config = readConfig(configPath)
 
     reference = JsonReference(referencePath)
-    agentFactory = RandomMainAgentFactory(
+    agentFactory = ClosePositionMainAgentFactory(
         reference.xMax(),
         reference.yMax(),
-        config["pointsMin"],
-        config["pointsMax"],
-        config["thresholdMin"],
-        config["thresholdMax"],
+        config["pointsMinMax"][0],
+        config["pointsMinMax"][1],
+        config["thresholdMinMax"][0],
+        config["thresholdMinMax"][1],
         config["alleleLength"],
-        config["numberOfInterpolationPoints"]
+        config["numberOfInterpolationPoints"],
+        config["startingPositionRadius"]
     )
     stateAdapter = JsonMainAgentStateAdapter(stateFilesDir, dirName)
     crosser = NoiseCrosser(config["crossoverChance"], config["crossoverPoints"])
-    mutator = NoiseMutator(config["mutationChance"])
+    mutator = NoiseMutator(config["mutationChance"], config["significantAlleles"])
 
-    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config)
+    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config, Pool(processes=12))
     algorithm.addFitnessFunction(NoiseFitnessFunction(), 1)
     start = time.time()
     algorithm.run()

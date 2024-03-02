@@ -1,3 +1,5 @@
+import time
+from multiprocessing import Pool
 from typing import List
 import math
 import random
@@ -21,6 +23,8 @@ class NoiseAlgorithm(GeneticAlgorithm):
     __mutator: Mutator
     __agentFactory: AgentFactory
 
+    __executor: Pool
+
     def __init__(
             self,
             reference: Reference,
@@ -28,7 +32,8 @@ class NoiseAlgorithm(GeneticAlgorithm):
             crosser: Crosser,
             mutator: Mutator,
             agentFactory: AgentFactory,
-            config: {}
+            config: {},
+            executor: Pool
     ):
         self.__reference = reference
         self.__stateAdapter = stateAdapter
@@ -36,6 +41,7 @@ class NoiseAlgorithm(GeneticAlgorithm):
         self.__mutator = mutator
         self.__agentFactory = agentFactory
         self.__config = config
+        self.__executor = executor
 
         self.__initialize()
 
@@ -74,7 +80,7 @@ class NoiseAlgorithm(GeneticAlgorithm):
         self.__evaluateAgents()
 
     def __sortAgents(self, ) -> None:
-        self.__population = sorted(self.__population, key=lambda x: x.getEvaluationValue(), reverse=True)
+        self.__population = sorted(self.__population, key=lambda x: x.getEvaluationValue(), reverse=False)
 
     def __normalizeAgents(self) -> None:
         fitnessScores = np.array([agent.getEvaluationValue() for agent in self.__population])
@@ -84,16 +90,23 @@ class NoiseAlgorithm(GeneticAlgorithm):
         for agent in self.__population:
             newScore = 1
             if minScore != maxScore:
-                newScore = abs((agent.getEvaluationValue() - minScore) / (maxScore - minScore))
+                newScore = abs((agent.getEvaluationValue() - maxScore) / (minScore - maxScore))
 
             agent.setEvaluationValue(newScore)
 
-    def __evaluateAgents(self) -> None:
-        for agent in self.__population:
-            eval = 0
-            for index, fitnessFunc in enumerate(self.__fitnessFunctions):
-                eval += self.__fitnessFunctionsWages[index] * fitnessFunc.evaluate(agent, self.__reference)
-            agent.setEvaluationValue(eval)
+    def __evaluateAgents(self):
+        agents = self.__population
+        fitnessFunctions = self.__fitnessFunctions
+        fitnessFunctionsWages = self.__fitnessFunctionsWages
+        reference = self.__reference
+
+        evals = self.__executor.starmap(
+            evaluateAgent,
+            [(agent, fitnessFunctions, fitnessFunctionsWages, reference) for agent in agents]
+        )
+
+        for agent, eval_value in zip(agents, evals):
+            agent.setEvaluationValue(eval_value)
 
     def __crossoverAgents(self) -> None:
         divider = 2
@@ -112,3 +125,11 @@ class NoiseAlgorithm(GeneticAlgorithm):
             population.append(self.__agentFactory.create())
 
         self.__population = population
+
+
+def evaluateAgent(agent: Agent, fitnessFunctions, fitnessFunctionsWages, reference) -> float:
+    eval = 0
+    for index, fitnessFunc in enumerate(fitnessFunctions):
+        eval += fitnessFunctionsWages[index] * fitnessFunc.evaluate(agent, reference)
+    agent.setEvaluationValue(eval)
+    return eval
