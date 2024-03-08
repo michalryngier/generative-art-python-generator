@@ -68,7 +68,7 @@ class MainAgent(Agent):
     __innerCurveDirty = False
     __step: float = None
 
-    def __init__(self, numberOfInterpolationPoints: int, threshold: int = 0, alleleLength: int = 64,
+    def __init__(self, numberOfInterpolationPoints: int, threshold: int = 1, alleleLength: int = 64,
                  geneticRepresentation: str = ''):
         self.__numberOfInterpolationPoints = numberOfInterpolationPoints
         self.__alleleLength = alleleLength
@@ -172,9 +172,9 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
         if not files:
             return None
 
-        files = filter(lambda x: x != 'config.json', files)
+        files = filter(lambda x: x != 'config.json' and x != '.DS_Store', files)
 
-        return sorted([os.path.join(self._dir, f) for f in files], key=lambda f: os.path.getctime(f))
+        return sorted([os.path.join(self._dir, f) for f in files])
 
     def _getLatestStateFileName(self) -> str | None:
         files = self._getStateFileNames()
@@ -382,7 +382,7 @@ class JsonReference(Reference):
 
     def getValueOnPoint(self, point: Point, threshold: int = 0) -> int | float:
         x, y = point.getX(), point.getY()
-        if threshold > 0:
+        if threshold > 1:
             return self.__getNeumannAverage(x, y, threshold)
 
         return float(self.__pointsValues[y, x])
@@ -399,6 +399,7 @@ class JsonReference(Reference):
         return self.__yMax
 
     def __getNeumannAverage(self, x: int, y: int, threshold: int) -> float:
+        threshold = math.floor(threshold / 2)
         yMin, yMax = max(0, y - threshold), min(self.yMax(), y + threshold + 1)
         xMin, xMax = max(0, x - threshold), min(self.xMax(), x + threshold + 1)
 
@@ -417,7 +418,7 @@ class JsonReference(Reference):
                 self.__yMax = data['yMax']
 
                 if isinstance(pointsValues, list):
-                    self.__pointsValues = np.array(data['pointsValues'], dtype=float)
+                    self.__pointsValues = np.array(pointsValues, dtype=float)
                     self.__yMax, self.__xMax = self.__pointsValues.shape[0] - 1, self.__pointsValues.shape[1] - 1
                 else:
                     print("Error: 'pointsValues' in JSON file is not an array.")
