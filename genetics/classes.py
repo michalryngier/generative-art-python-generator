@@ -1,3 +1,4 @@
+import ctypes
 import json
 import math
 import os
@@ -5,14 +6,12 @@ import random
 import time
 import uuid
 from abc import ABC
-from typing import List
 from textwrap import wrap
+from typing import List
 
-from Cython.Shadow import _ArrayType
+import numpy as np
 
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
-import ctypes
-import numpy as np
 
 interpolateLib = ctypes.CDLL('./image/interpolate/interpolate.so')
 interpolate_function = interpolateLib.interpolate
@@ -213,7 +212,13 @@ class JsonMainAgentStateAdapter(_JsonAgentStateAdapter):
         if latestFileName is None:
             return agents
 
-        stateRawList = self._getStateFileContent(latestFileName)
+        print(latestFileName)
+
+        return self.loadByStatePath(latestFileName)
+
+    def loadByStatePath(self, stateFilePath: str):
+        agents: List[Agent] = []
+        stateRawList = self._getStateFileContent(stateFilePath)
 
         if stateRawList is None:
             return agents

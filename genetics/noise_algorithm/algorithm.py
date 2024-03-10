@@ -79,9 +79,10 @@ class NoiseAlgorithm(GeneticAlgorithm):
             self.__mutateAgents()
 
             progress = round(x / iterations * 100, 2)
-            print(f"{progress}%")
+            print(f"{progress}")
 
         self.__evaluateAgents()
+        print(f"{100.0}")
 
     def __sortAgents(self, ) -> None:
         self.__population = sorted(self.__population, key=lambda x: x.getEvaluationValue(), reverse=False)

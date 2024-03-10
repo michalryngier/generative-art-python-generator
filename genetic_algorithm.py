@@ -71,7 +71,7 @@ def runForOne(directoryPath: Path, dirName: str, prefix: str):
     crosser = NoiseCrosser(config["crossoverChance"], config["crossoverPoints"])
     mutator = NoiseMutator(config["mutationChance"], config["significantAlleles"])
 
-    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config, Pool(processes=12))
+    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config, Pool(processes=8))
     algorithm.addFitnessFunction(NoiseFitnessFunction(), 1)
     start = time.time()
     algorithm.run()
