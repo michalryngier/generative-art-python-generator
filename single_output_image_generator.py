@@ -18,15 +18,19 @@ agentsPrinted = []
 
 
 def main():
-    if len(sys.argv) < 1:
-        print("Usage: python single_output__image_generator.py [inputPath] [stateFilePath]")
+    if len(sys.argv) < 5:
+        print(
+            "Usage: python single_output__image_generator.py [inputPath] [stateFilePath] [fgColor] [bgColor] [minEvaluation]")
         sys.exit(1)
 
     inputPath = str(sys.argv[1])
     stateFilePath = str(sys.argv[2])
+    fgColor = hex_to_rgba(str(sys.argv[3]))
+    bgColor = hex_to_rgba(str(sys.argv[4]))
+    minEvaluation = float(sys.argv[5])
+
     filepath = 'window_image'
     scale = 1
-    minEvaluation = 0.0001
 
     referencePath = f"{os.path.dirname(inputPath)}/reference.json"
 
@@ -40,11 +44,10 @@ def main():
         os.makedirs(imagesPath)
 
     imagePath = f"{imagesPath}/{os.path.basename(stateFilePath).split('.')[0]}.png"
-    print(stateFilePath)
     width = reference.xMax() * scale
     height = reference.yMax() * scale
 
-    image = createImage(width, height, agents, minEvaluation, scale)
+    image = createImage(width, height, agents, minEvaluation, bgColor, fgColor, scale)
 
     dpi = 300
     plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
@@ -59,15 +62,20 @@ def main():
     return 0
 
 
-def createImage(width: int, height: int, agents: List[Agent], minEvaluation: float = .0, scale: int = 1):
-    image = np.zeros((height, width, 4), dtype=np.uint8)
-    image[:, :, :3] = 255
-    image[:, :, 3] = 255
-
+def createImage(
+        width: int,
+        height: int,
+        agents: List[Agent],
+        minEvaluation: float = .0,
+        bgColor: tuple = (0, 0, 0, 255),
+        fgColor: tuple = (255, 255, 255, 255),
+        scale: int = 1
+):
+    image = np.full((height, width, 4), bgColor, dtype=np.uint8)
     agentsPrintedInIteration = 0
 
     for agent in agents:
-        color = (0, 0, 0, 255)
+        color = fgColor
         step = agent.getStep()
         arrange = np.arange(0, 1 + step, step)
         points = []
@@ -110,6 +118,14 @@ def calculateAlpha(distance: float, maxDistance: float) -> int:
     alpha = max(minAlpha, int(maxAlpha - ((distance / maxDistance) * (maxAlpha - minAlpha))))
 
     return int(alpha)
+
+
+def hex_to_rgba(hex_color: str):
+    hex_color = hex_color.lstrip('#')
+    rgb = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    rgba = rgb + (255,)
+
+    return rgba
 
 
 if __name__ == "__main__":

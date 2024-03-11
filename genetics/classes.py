@@ -210,8 +210,6 @@ class JsonMainAgentStateAdapter(_JsonAgentStateAdapter):
         if latestFileName is None:
             return agents
 
-        print(latestFileName)
-
         return self.loadByStatePath(latestFileName)
 
     def loadByStatePath(self, stateFilePath: str):
