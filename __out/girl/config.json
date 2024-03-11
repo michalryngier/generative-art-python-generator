@@ -1,5 +1,5 @@
 {
-    "iterations": 5,
+    "iterations": 150,
     "savingFreq": 1,
     "crossoverChance": 0.8,
     "crossoverPoints": 3,

@@ -3,6 +3,7 @@ import tkinter as tk
 import threading
 import subprocess
 import os
+from tkinter import colorchooser
 from typing import TYPE_CHECKING
 
 from gui.monitor_window import MonitorWindow
@@ -25,7 +26,7 @@ class GeneratorView(tk.Frame):
         "populationSize": int,
         "alleleLength": int,
         "significantAlleles": int,
-        "startingPositionRadius": int
+        "startingPositionRadius": int,
     }
 
     def __init__(self, master: 'Application', image_path):
@@ -34,6 +35,9 @@ class GeneratorView(tk.Frame):
         self.entry_fields = {}
         self.image_path = image_path
         self.initial_values = self.load_config()
+        self.background_color_entry = None
+        self.foreground_color_entry = None
+        self.cutoff_value_entry = None
         self.create_widgets()
         self.focus_first_entry()
 
@@ -67,7 +71,7 @@ class GeneratorView(tk.Frame):
             "populationSize": "Liczeność populacji początkowej",
             "alleleLength": "Długość genu (32 lub 64)",
             "significantAlleles": "Istotne allele",
-            "startingPositionRadius": "Promień rozrzutu punktów początkowych krzywych"
+            "startingPositionRadius": "Promień rozrzutu punktów początkowych krzywych",
         }
 
         row = 0
@@ -83,9 +87,55 @@ class GeneratorView(tk.Frame):
             self.entry_fields[param] = entry  # Add entry field to dictionary
             row += 1
 
+        # Color pickers
+        foreground_color_label = tk.Label(frame, text="Kolor bazowy:")
+        foreground_color_label.grid(row=row, column=0, padx=10, pady=5, sticky="e")
+
+        self.foreground_color_entry = tk.Entry(frame)
+        self.foreground_color_entry.insert(0, "#FFFFFF")  # Default color is white
+        self.foreground_color_entry.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+
+        base_color_picker_button = tk.Button(frame, text="Wybierz kolor", command=self.pick_base_color)
+        base_color_picker_button.grid(row=row, column=2, padx=5, pady=5)
+
+        row += 1
+
+        background_color_label = tk.Label(frame, text="Kolor tła:")
+        background_color_label.grid(row=row, column=0, padx=10, pady=5, sticky="e")
+
+        self.background_color_entry = tk.Entry(frame)
+        self.background_color_entry.insert(0, "#000000")  # Default color is black
+        self.background_color_entry.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+
+        background_color_picker_button = tk.Button(frame, text="Wybierz kolor", command=self.pick_background_color)
+        background_color_picker_button.grid(row=row, column=2, padx=5, pady=5)
+
+        row += 1
+
+        cutoff_value_label = tk.Label(frame, text="Wartość odcięcia:")
+        cutoff_value_label.grid(row=row, column=0, padx=10, pady=5, sticky="e")
+
+        self.cutoff_value_entry = tk.Entry(frame)
+        self.cutoff_value_entry.insert(0, "0.0")  # Default cutoff value
+        self.cutoff_value_entry.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+
+        row += 1
+
         # Create the "Generate" button
         generate_button = tk.Button(self, text="Generuj", command=self.generate)
         generate_button.pack(padx=10, pady=10)
+
+    def pick_base_color(self):
+        color = colorchooser.askcolor()[1]  # Returns a tuple (rgb, hex)
+        if color:
+            self.foreground_color_entry.delete(0, tk.END)
+            self.foreground_color_entry.insert(0, color)
+
+    def pick_background_color(self):
+        color = colorchooser.askcolor()[1]  # Returns a tuple (rgb, hex)
+        if color:
+            self.background_color_entry.delete(0, tk.END)
+            self.background_color_entry.insert(0, color)
 
     def focus_first_entry(self):
         # Focus on the first entry field
@@ -110,7 +160,8 @@ class GeneratorView(tk.Frame):
         subprocess.run(["python", "genetic_algorithm.py", folder_name])
 
     def open_monitor(self):
-        self.master.open_new_window(MonitorWindow, image_path = self.image_path)
+        self.master.open_new_window(MonitorWindow, image_path=self.image_path, fg_color=self.foreground_color_entry.get(),
+                                    bg_color=self.background_color_entry.get(), cutoff=self.cutoff_value_entry.get())
 
     def save_config(self):
         # Retrieve values from entry fields and construct the JSON input
