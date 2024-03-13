@@ -31,7 +31,6 @@ class GeneratorView(tk.Frame):
 
     def __init__(self, master: 'Application', image_path):
         super().__init__(master)
-        self.process = None
         self.entry_fields = {}
         self.image_path = image_path
         self.initial_values = self.load_config()
@@ -62,16 +61,19 @@ class GeneratorView(tk.Frame):
         custom_labels = {
             "iterations": "Liczba iteracji algorytmu",
             "savingFreq": "Częstotliwość zapisu",
-            "crossoverChance": "Prawdopodobieństwo krzyżowania (0 -> 1)",
-            "crossoverPoints": "Liczba punktów krzyżowania",
-            "mutationChance": "Prawdopodobieństwo mutacji (0 -> 1)",
-            "pointsMinMax": "Liczba punktów krzywych min-max (np. 1,2)",
-            "thresholdMinMax": "Grubość krzywych min-max (np. 1,2)",
+            "pointsMinMax": "Liczba punktów krzywych min-max",
+            "thresholdMinMax": "Grubość krzywych min-max",
             "numberOfInterpolationPoints": "Liczba rysowanych punktów na krzywej",
             "populationSize": "Liczeność populacji początkowej",
-            "alleleLength": "Długość genu (32 lub 64)",
-            "significantAlleles": "Istotne allele",
-            "startingPositionRadius": "Promień rozrzutu punktów początkowych krzywych",
+        }
+
+        slider_params = {
+            "iterations": {"min": 10, "max": 300, "step": 10},
+            "savingFreq": {"min": 1, "max": 5, "step": 1},
+            "pointsMinMax": {"min": 1, "max": 25, "step": 1},
+            "thresholdMinMax": {"min": 1, "max": 10, "step": 1},
+            "numberOfInterpolationPoints": {"min": 10, "max": 500, "step": 10},
+            "populationSize": {"min": 1000, "max": 15000, "step": 100},
         }
 
         row = 0
@@ -79,12 +81,32 @@ class GeneratorView(tk.Frame):
             label = tk.Label(frame, text=f"{custom_label}:")
             label.grid(row=row, column=0, padx=10, pady=5, sticky="e")
 
-            initial_value = self.initial_values.get(param, "") if self.initial_values else ""
-            entry = tk.Entry(frame)
-            entry.insert(0, initial_value)  # Set initial value
-            entry.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+            if param in ["pointsMinMax", "thresholdMinMax"]:
+                slider_frame = tk.Frame(frame)
+                slider_frame.grid(row=row, column=1, padx=10, pady=5, sticky="w")
 
-            self.entry_fields[param] = entry  # Add entry field to dictionary
+                slider_params_data = slider_params[param]
+                min_slider = tk.Scale(slider_frame, from_=slider_params_data["min"], to=slider_params_data["max"],
+                                      orient="horizontal", resolution=slider_params_data["step"])
+                min_slider.set(self.initial_values[param][0])  # Set initial value
+                min_slider.pack(side="left", padx=5)
+
+                max_slider = tk.Scale(slider_frame, from_=slider_params_data["min"], to=slider_params_data["max"],
+                                      orient="horizontal", resolution=slider_params_data["step"])
+                max_slider.set(self.initial_values[param][1])  # Set initial value
+                max_slider.pack(side="left", padx=5)
+
+                self.entry_fields[param] = (min_slider, max_slider)  # Add slider fields to dictionary
+            else:
+                slider_params_data = slider_params[param]
+                slider = tk.Scale(frame, from_=slider_params_data["min"], to=slider_params_data["max"],
+                                  orient="horizontal",
+                                  resolution=slider_params_data["step"])
+                slider.set(self.initial_values.get(param, slider_params_data["min"]))  # Set initial value
+                slider.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+
+                self.entry_fields[param] = slider  # Add slider field to dictionary
+
             row += 1
 
         # Color pickers
@@ -115,8 +137,8 @@ class GeneratorView(tk.Frame):
         cutoff_value_label = tk.Label(frame, text="Wartość odcięcia:")
         cutoff_value_label.grid(row=row, column=0, padx=10, pady=5, sticky="e")
 
-        self.cutoff_value_entry = tk.Entry(frame)
-        self.cutoff_value_entry.insert(0, "0.0")  # Default cutoff value
+        self.cutoff_value_entry = tk.Scale(frame, from_=0, to=1, orient="horizontal", resolution=0.01)
+        self.cutoff_value_entry.set(0.5)  # Set initial value
         self.cutoff_value_entry.grid(row=row, column=1, padx=10, pady=5, sticky="w")
 
         row += 1
@@ -138,9 +160,7 @@ class GeneratorView(tk.Frame):
             self.background_color_entry.insert(0, color)
 
     def focus_first_entry(self):
-        # Focus on the first entry field
-        first_entry = next(iter(self.entry_fields.values()))
-        first_entry.focus_set()
+        self.foreground_color_entry.focus_set()
 
     def back_to_gallery(self):
         from gui.image_gallery import ImageGallery
@@ -160,67 +180,64 @@ class GeneratorView(tk.Frame):
         subprocess.run(["python", "genetic_algorithm.py", folder_name])
 
     def open_monitor(self):
-        self.master.open_new_window(MonitorWindow, image_path=self.image_path, fg_color=self.foreground_color_entry.get(),
+        self.master.open_new_window(MonitorWindow, image_path=self.image_path,
+                                    fg_color=self.foreground_color_entry.get(),
                                     bg_color=self.background_color_entry.get(), cutoff=self.cutoff_value_entry.get())
 
     def save_config(self):
-        # Retrieve values from entry fields and construct the JSON input
         json_input = {}
         for param, entry in self.entry_fields.items():
-            # Get the value from the entry field
-            param_value = entry.get()
-            # Get the data type for the parameter
             param_type = self.PARAMETER_TYPES[param]
-            # Convert the value to the appropriate data type
+
             if param_type == list:
-                param_value = [int(val.strip()) for val in param_value.split(",")]
+                param_value = [entry[0].get(), entry[1].get()]
             else:
-                param_value = param_type(param_value)
-            # Add the parameter and its value to the JSON input
+                param_value = entry.get()
+
             json_input[param] = param_value
 
-        # Get the path for config.json
         config_path = self.get_config_path()
 
-        # Write the JSON input to config.json with nicely formatted indentation
         with open(config_path, 'w') as json_file:
-            json.dump(json_input, json_file, indent=4)
+            json.dump({**json_input, **self.default_config()}, json_file, indent=4)
 
         print("Config file saved successfully.")
+
+    def default_config(self):
+        return {
+            "savingFreq": 1,
+            "crossoverChance": 0.8,
+            "crossoverPoints": 3,
+            "mutationChance": 0.0001,
+            "alleleLength": 64,
+            "significantAlleles": 4,
+            "startingPositionRadius": 200
+        }
 
     def load_config(self):
         config_path = self.get_config_path()
         if os.path.exists(config_path):
-            # Load config from config.json if it exists
-            config_path = self.get_config_path()
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as json_file:
-                    config = json.load(json_file)
-                    # Convert values to appropriate data types based on PARAMETER_TYPES
-                    for param, param_type in self.PARAMETER_TYPES.items():
-                        if param in config:
-                            if param_type == list:
-                                config[param] = ','.join(str(x) for x in config[param]),
-                            else:
-                                config[param] = param_type(config[param])
-                return config
-            else:
-                return {}
-        else:
-            return {
-                "iterations": 100,
-                "savingFreq": 1,
-                "crossoverChance": 0.8,
-                "crossoverPoints": 3,
-                "mutationChance": 0.0001,
-                "pointsMinMax": "5, 10",
-                "thresholdMinMax": "1, 2",
-                "numberOfInterpolationPoints": 150,
-                "populationSize": 10000,
-                "alleleLength": 64,
-                "significantAlleles": 4,
-                "startingPositionRadius": 200
-            }
+            with open(config_path, 'r') as json_file:
+                config = json.load(json_file)
+                # Convert values to appropriate data types based on PARAMETER_TYPES
+                for param, param_type in self.PARAMETER_TYPES.items():
+                    if param in config:
+                        if param_type == list:
+                            continue
+                        else:
+                            config[param] = param_type(config[param])
+
+            return {**config, **self.default_config()}
+
+        return {
+            "iterations": 100,
+            "savingFreq": 1,
+            "pointsMinMax": "5, 10",
+            "thresholdMinMax": "1, 2",
+            "numberOfInterpolationPoints": 150,
+            "populationSize": 10000,
+            **self.default_config()
+        }
 
     def get_config_path(self):
         image_dir = os.path.dirname(self.image_path)

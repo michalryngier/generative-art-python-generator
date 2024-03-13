@@ -53,7 +53,7 @@ class MonitorWindow(tk.Toplevel):
                 if os.path.isfile(file_path):
                     subprocess.run(
                         ["python", "single_output_image_generator.py", directory, file_path, self.fg_color,
-                         self.bg_color, self.cutoff], check=True)
+                         self.bg_color, str(self.cutoff)], check=True)
 
                     image_path = f"{directory}/images-generated/{os.path.basename(file_path).split('.')[0]}.png"
                     if os.path.exists(image_path):
