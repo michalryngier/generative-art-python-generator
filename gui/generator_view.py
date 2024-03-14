@@ -37,6 +37,7 @@ class GeneratorView(tk.Frame):
         self.background_color_entry = None
         self.foreground_color_entry = None
         self.cutoff_value_entry = None
+        self.generator_process = None
         self.create_widgets()
         self.focus_first_entry()
 
@@ -60,7 +61,6 @@ class GeneratorView(tk.Frame):
         # Custom labels for each parameter
         custom_labels = {
             "iterations": "Liczba iteracji algorytmu",
-            "savingFreq": "Częstotliwość zapisu",
             "pointsMinMax": "Liczba punktów krzywych min-max",
             "thresholdMinMax": "Grubość krzywych min-max",
             "numberOfInterpolationPoints": "Liczba rysowanych punktów na krzywej",
@@ -69,11 +69,10 @@ class GeneratorView(tk.Frame):
 
         slider_params = {
             "iterations": {"min": 10, "max": 300, "step": 10},
-            "savingFreq": {"min": 1, "max": 5, "step": 1},
             "pointsMinMax": {"min": 1, "max": 25, "step": 1},
             "thresholdMinMax": {"min": 1, "max": 10, "step": 1},
-            "numberOfInterpolationPoints": {"min": 10, "max": 500, "step": 10},
-            "populationSize": {"min": 1000, "max": 15000, "step": 100},
+            "numberOfInterpolationPoints": {"min": 10, "max": 1000, "step": 10},
+            "populationSize": {"min": 1000, "max": 30000, "step": 100},
         }
 
         row = 0
@@ -172,17 +171,25 @@ class GeneratorView(tk.Frame):
 
     def generate(self):
         self.save_config()
-        threading.Thread(target=self.run_generator_subprocess).start()
         threading.Thread(target=self.open_monitor).start()
+        self.run_generator_subprocess()
 
     def run_generator_subprocess(self):
         folder_name = os.path.basename(os.path.dirname(self.image_path))
-        subprocess.run(["python", "genetic_algorithm.py", folder_name])
+        self.generator_process = subprocess.Popen(["python", "genetic_algorithm.py", folder_name])
 
     def open_monitor(self):
         self.master.open_new_window(MonitorWindow, image_path=self.image_path,
                                     fg_color=self.foreground_color_entry.get(),
-                                    bg_color=self.background_color_entry.get(), cutoff=self.cutoff_value_entry.get())
+                                    bg_color=self.background_color_entry.get(),
+                                    cutoff=self.cutoff_value_entry.get(),
+                                    close_cb=self.stop_subprocess_and_close)
+
+    def stop_subprocess_and_close(self):
+        if hasattr(self, 'generator_process') and self.generator_process.poll() is None:
+            pass
+            self.generator_process.terminate()
+            self.generator_process.wait()
 
     def save_config(self):
         json_input = {}
@@ -231,7 +238,6 @@ class GeneratorView(tk.Frame):
 
         return {
             "iterations": 100,
-            "savingFreq": 1,
             "pointsMinMax": "5, 10",
             "thresholdMinMax": "1, 2",
             "numberOfInterpolationPoints": 150,

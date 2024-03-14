@@ -1,3 +1,5 @@
+import signal
+
 import math
 import os
 import subprocess
@@ -128,5 +130,10 @@ def hex_to_rgba(hex_color: str):
     return rgba
 
 
+def sigint_handler(signal, frame):
+    print('Closing output image writer')
+    sys.exit(0)
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, sigint_handler)  # Register signal handler for SIGINT
     main()

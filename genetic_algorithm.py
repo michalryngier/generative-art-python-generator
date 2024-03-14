@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 import sys
 import time
 from multiprocessing import Pool
@@ -15,7 +16,7 @@ from genetics.noise_algorithm.mutator import NoiseMutator
 
 main_directory = Path(__file__).resolve().parent
 outPath = f"{main_directory}/__out"
-
+pool: Pool = None
 
 def main():
     if len(sys.argv) < 2:
@@ -33,6 +34,8 @@ def main():
 
 
 def runForOne(directoryPath: Path, dirName: str):
+    global pool
+    pool = Pool(processes=8)
     referencePath = f"{directoryPath}/reference.json"
     configPath = f"{directoryPath}/config.json"
     stateFilesDir = f"{directoryPath}/__out_{int(time.time())}"
@@ -67,12 +70,15 @@ def runForOne(directoryPath: Path, dirName: str):
     crosser = NoiseCrosser(config["crossoverChance"], config["crossoverPoints"])
     mutator = NoiseMutator(config["mutationChance"], config["significantAlleles"])
 
-    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config, Pool(processes=8))
+    algorithm = NoiseAlgorithm(reference, stateAdapter, crosser, mutator, agentFactory, config, pool)
     algorithm.addFitnessFunction(NoiseFitnessFunction(), 1)
     start = time.time()
     algorithm.run()
     print(f"time: {time.time() - start}")
     algorithm.save()
+
+    pool.close()
+    pool.join()
 
 
 def readConfig(configPath: str) -> {}:
@@ -80,5 +86,14 @@ def readConfig(configPath: str) -> {}:
         return json.load(file)
 
 
+def sigint_handler(signal, frame):
+    if pool is not None:
+        print('Closing the pool')
+        pool.terminate()
+        pool.join()
+        print('Pool closed')
+    sys.exit(0)
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, sigint_handler)  # Register signal handler for SIGINT
     main()
