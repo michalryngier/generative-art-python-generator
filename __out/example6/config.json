@@ -1,16 +1,16 @@
 {
-    "iterations": 300,
-    "savingFreq": 1,
+    "iterations": 100,
     "pointsMinMax": [
         15,
         20
     ],
     "thresholdMinMax": [
         1,
-        1
+        2
     ],
     "numberOfInterpolationPoints": 150,
     "populationSize": 6000,
+    "savingFreq": 1,
     "crossoverChance": 0.8,
     "crossoverPoints": 3,
     "mutationChance": 0.0001,

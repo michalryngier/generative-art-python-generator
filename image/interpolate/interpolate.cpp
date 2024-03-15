@@ -2,7 +2,13 @@
 #include <cstdlib>
 #include <vector>
 
+#define DLL_EXPORT __declspec(dllexport)
+
 extern "C" {
+    DLL_EXPORT double* interpolate(double t, double points[][2], int size);
+    DLL_EXPORT void reset(double* pkt);
+}
+
 double* interpolate(double t, double points[][2], int size)
 {
     int order = size - 1;
@@ -68,4 +74,4 @@ void reset(double* pkt)
 {
     free(pkt);
 }
-}
+

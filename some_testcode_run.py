@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-interpolate = ctypes.CDLL('./interpolate/interpolate.so')
+interpolate = ctypes.CDLL('./interpolate/interpolate.dll')
 
 # Define the C++ function signature
 interpolate_function = interpolate.interpolate

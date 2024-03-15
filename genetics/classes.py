@@ -13,7 +13,7 @@ import numpy as np
 
 from genetics.basics import Agent, Point, AlgorithmStateAdapter, Crosser, Mutator, AgentFactory, Reference
 
-interpolateLib = ctypes.CDLL('./image/interpolate/interpolate.so')
+interpolateLib = ctypes.CDLL('./image/interpolate/interpolate.dll')
 interpolate_function = interpolateLib.interpolate
 interpolate_function.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.c_int]
 interpolate_function.restype = ctypes.POINTER(ctypes.c_double)

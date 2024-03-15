@@ -31,10 +31,11 @@ def main():
     name, extension = filepath.split(".")
     outputFilepath = f"{name}_em.{extension}"
     outputPath = f"{outPath}/{outputFilepath}"
-    dirName = filepath.split("/")
-    referenceOutputPath = f"{outPath}/{dirName[0]}/reference.json"
 
+    dirName = filepath.split("\\")
+    referenceOutputPath = f"{outPath}/{dirName[0]}/reference.json"
     directoryPath = Path(inputPath)
+
     if not directoryPath.exists() or not directoryPath.is_file():
         print(f"Not a file {outPath}/{filepath}")
         sys.exit(1)
