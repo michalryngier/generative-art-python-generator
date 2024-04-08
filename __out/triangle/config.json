@@ -1,0 +1,20 @@
+{
+  "iterations": 200,
+  "pointsMinMax": [
+    2,
+    5
+  ],
+  "thresholdMinMax": [
+    1,
+    1
+  ],
+  "numberOfInterpolationPoints": 150,
+  "populationSize": 1600,
+  "savingFreq": 2,
+  "crossoverChance": 0.55,
+  "crossoverPoints": 1,
+  "mutationChance": 0.0005,
+  "alleleLength": 64,
+  "significantAlleles": 8,
+  "startingPositionRadius": 100
+}

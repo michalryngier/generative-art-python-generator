@@ -19,23 +19,31 @@ agentsPrinted = []
 
 def main():
     if len(sys.argv) < 1:
-        print("Usage: python output__image_generator.py [filepath] [version] [scale] [minEvaluation]")
+        print("Usage: python output__image_generator.py [filepath] [version] [scale] [minEvaluation] [legacyMode]")
         sys.exit(1)
 
     filepath = str(sys.argv[1])
     version = str(sys.argv[2])
     scale = 1
     minEvaluation = 0.5
+    legacyMode = False
 
     if len(sys.argv) > 3:
         scale = int(sys.argv[3])
     if len(sys.argv) > 4:
         minEvaluation = float(sys.argv[4])
+    if len(sys.argv) > 5:
+        legacyMode = bool(sys.argv[5])
 
     referencePath = f"{outPath}/{filepath}/reference.json"
-    inputPath = f"{outPath}/{filepath}/__out_{version}"
 
-    stateAdapter = JsonMainAgentStateAdapter(inputPath, filepath)
+    inputPath = ''
+    if len(version) == 10:
+        inputPath = f"{outPath}/{filepath}/__out_{version}"
+    else:
+        inputPath = f"{outPath}/{filepath}/{version}"
+
+    stateAdapter = JsonMainAgentStateAdapter(inputPath, filepath, legacyMode)
     reference = JsonReference(referencePath)
 
     iterator = 0

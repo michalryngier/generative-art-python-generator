@@ -132,11 +132,11 @@ class MainAgent(Agent):
 
     def toDictionary(self) -> {}:
         return {
-            "eval": self.__eval,
-            "geneticRepresentation": self.__geneticRepresentation,
-            "alleleLength": int(self.__alleleLength),
-            "threshold": int(self.__threshold),
-            "numberOfInterpolationPoints": int(self.__numberOfInterpolationPoints),
+            "e": self.__eval,
+            "g": self.__geneticRepresentation,
+            "a": int(self.__alleleLength),
+            "t": int(self.__threshold),
+            "n": int(self.__numberOfInterpolationPoints),
         }
 
 
@@ -144,10 +144,12 @@ class _JsonAgentStateAdapter(AlgorithmStateAdapter, ABC):
     _state: List[Agent] = None
     _filePrefix: str
     _dir: str
+    _legacy: bool
 
-    def __init__(self, directory: str, prefix: str):
+    def __init__(self, directory: str, prefix: str, legacy: bool = False):
         self._dir = directory
         self._filePrefix = prefix
+        self._legacy = legacy
 
     def setState(self, state: List[Agent]) -> None:
         self._state = state
@@ -216,11 +218,19 @@ class JsonMainAgentStateAdapter(_JsonAgentStateAdapter):
         if stateRawList is None:
             return agents
 
-        for rawAgentData in stateRawList:
-            agent = MainAgent(rawAgentData["numberOfInterpolationPoints"], rawAgentData["threshold"],
-                              rawAgentData["alleleLength"], rawAgentData["geneticRepresentation"])
-            agent.setEvaluationValue(rawAgentData["eval"])
-            agents.append(agent)
+        # Legacy mode
+        if self._legacy:
+            for rawAgentData in stateRawList:
+                agent = MainAgent(rawAgentData["numberOfInterpolationPoints"], rawAgentData["threshold"],
+                                  rawAgentData["alleleLength"], rawAgentData["geneticRepresentation"])
+                agent.setEvaluationValue(rawAgentData["eval"])
+                agents.append(agent)
+        else:
+            for rawAgentData in stateRawList:
+                agent = MainAgent(rawAgentData["n"], rawAgentData["t"],
+                                  rawAgentData["a"], rawAgentData["g"])
+                agent.setEvaluationValue(rawAgentData["e"])
+                agents.append(agent)
 
         return agents
 

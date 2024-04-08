@@ -65,6 +65,10 @@ class NoiseAlgorithm(GeneticAlgorithm):
         for x in range(iterations):
             self.__evaluateAgents()
 
+            # when without first population
+            # if x != 0 and x % self.__config["savingFreq"] == 0:
+
+            # when with first population
             if x % self.__config["savingFreq"] == 0:
                 self.save()
 

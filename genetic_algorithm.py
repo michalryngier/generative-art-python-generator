@@ -16,26 +16,30 @@ from genetics.noise_algorithm.mutator import NoiseMutator
 main_directory = Path(__file__).resolve().parent
 outPath = f"{main_directory}/__out"
 
-
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python genetic_algorithm.py [filename]")
+        print("Usage: python genetic_algorithm.py [filename] [prefix]")
         sys.exit(1)
 
     dirName = str(sys.argv[1])
+    prefix = ''
+
+    if len(sys.argv) >= 3:
+        prefix = str(sys.argv[2])
+
     directoryPath = Path(f"{outPath}/{dirName}")
 
     if not directoryPath.is_dir():
         print(f"Not a directory {outPath}/{dirName}")
         sys.exit(1)
 
-    runForOne(directoryPath, dirName)
+    runForOne(directoryPath, dirName, prefix)
 
 
-def runForOne(directoryPath: Path, dirName: str):
+def runForOne(directoryPath: Path, dirName: str, prefix: str):
     referencePath = f"{directoryPath}/reference.json"
     configPath = f"{directoryPath}/config.json"
-    stateFilesDir = f"{directoryPath}/__out_{int(time.time())}"
+    stateFilesDir = f"{directoryPath}/{prefix}__out_{int(time.time())}"
 
     if not os.path.exists(referencePath) or not os.path.isfile(referencePath):
         print(f"File does not exist {referencePath}")
