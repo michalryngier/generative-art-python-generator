@@ -33,10 +33,10 @@ g++ -shared -O3 -std=c++17 -o ./image/interpolate/interpolate.so -fPIC ./image/i
     ```
 5. Generate output images:
     ```bash
-    python output__image_generator.py [filepath] [version] [scale] [minEvaluation]
+    python output__image_generator.py [filepath] [version] [scale] [minEvaluation] [legacyMode]
     ```
    **Example:**
     ```bash
-    python output__image_generator.py "example" "1707425462" 2 0.0
+    python output__image_generator.py "example" "1707425462" 2 0.0 0
     ```
    `version` is the timestamp of the `__out_{timestamp}` dictionary created under `/__out/example/`.

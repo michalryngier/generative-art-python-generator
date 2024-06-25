@@ -50,12 +50,16 @@ def main(writeCsv=False):
             writer.writerow(headers)
 
     for imageName in images:
-        # crossoverTests(imageName)
-        # mutationTests(imageName)
-        # pointsMinMaxTests(imageName)
-        # crossoverPointsTests(imageName)
-        benfordAndFractal(imageName)
+        print(crossoverTests(imageName)*3*7)
+        print(mutationTests(imageName) * 3 * 7)
+        print(crossoverPointsTests(imageName) * 3 * 7 - (1 * 10 * 3 * 7))
+        print(pointsMinMaxTests(imageName)*3*7)
+
+        print((crossoverTests(imageName)*3*7) + (mutationTests(imageName) * 3 * 7) + (crossoverPointsTests(imageName) * 3 * 7 - (1 * 10 * 3 * 7)) + (pointsMinMaxTests(imageName)*3*7))
+        # benfordAndFractal(imageName)
         # deepCrossover(imageName)
+        # print(imageName)
+        break
 
     # agentsEvaluationAcrossIterations('deepCrossover', 'crossoverChance')
 
@@ -78,41 +82,54 @@ def getDefaultConfigFromFile():
 
 def crossoverTests(testImageName: str):
     config = getDefaultConfigFromFile()
+    number = 0
 
     for i in range(0, 26):
         config["crossoverChance"] = 0.5 + 0.02 * i
 
         for j in range(10):
-            baseTest(testImageName, config, f'crossover_{config["crossoverChance"]}_{j}')
+            number += 1
+            # baseTest(testImageName, config, f'crossover_{config["crossoverChance"]}_{j}')
+    return number
 
 
 def mutationTests(testImageName: str):
     config = getDefaultConfigFromFile()
+    number = 0
 
     for i in range(0, 201):
         config["mutationChance"] = 0.00005 * i
 
         for j in range(10):
-            baseTest(testImageName, config, f'mutation_{config["mutationChance"]}_{j}')
+            number += 1
+            # baseTest(testImageName, config, f'mutation_{config["mutationChance"]}_{j}')
+    return number
 
 
 def pointsMinMaxTests(testImageName: str):
     config = getDefaultConfigFromFile()
+    number = 0
 
     for i in range(10):
         for j in range(i, 10):
             config["pointsMinMax"] = [i, j]
 
             for k in range(10):
-                baseTest(testImageName, config, f'points_{config["pointsMinMax"]}_{k}')
+                number += 1
+                # baseTest(testImageName, config, f'points_{config["pointsMinMax"]}_{k}')
+    return number
 
 
 def crossoverPointsTests(testImageName: str):
     config = getDefaultConfigFromFile()
+    number = 0
+
     for i in range(10):
         config["crossoverPoints"] = i
         for j in range(10):
-            baseTest(testImageName, config, f'crossoverPoints_{config["crossoverPoints"]}_{j}')
+            number += 1
+            # baseTest(testImageName, config, f'crossoverPoints_{config["crossoverPoints"]}_{j}')
+    return number
 
 
 def baseTest(testImageName: str, configValues: dict, prefix: str):
@@ -127,7 +144,8 @@ def baseTest(testImageName: str, configValues: dict, prefix: str):
 
 def createImage(testImageName: str, version: str, minEvaluation: float):
     # run output_image_generator.py with the given arguments
-    subprocess.Popen(["python", "output_image_generator.py", testImageName, version, '1', f'{minEvaluation:.2f}', '1']).wait()
+    subprocess.Popen(
+        ["python", "output_image_generator.py", testImageName, version, '1', f'{minEvaluation:.2f}', '1']).wait()
 
 
 def removeImage(imagePath: str):
@@ -241,4 +259,4 @@ def findConfigJsonInFolder(folder: str) -> str | None:
 
 
 if __name__ == "__main__":
-    main(True)
+    main(False)
