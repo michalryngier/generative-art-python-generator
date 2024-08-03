@@ -4,13 +4,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import norm
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 # Wczytaj plik CSV
 df = pd.read_csv('benford-fractal.csv')
+
+cmap = plt.cm.Blues
+color = cmap(0.8)
 
 # Zastosuj metodę DBSCAN
 kmeans = KMeans(n_clusters=3, random_state=2147483648)
@@ -19,7 +21,7 @@ df['Esthetics_Group'] = kmeans.fit_predict(df[['Fractal']])
 # Utwórz histogram
 plt.figure(figsize=(12, 6))
 sns.set(style="whitegrid")
-barplot = sns.barplot(x='Esthetics_Group', y='Benford', data=df, errorbar='sd', capsize=0.1, err_kws={'linewidth': 1.5})
+barplot = sns.barplot(color=color, x='Esthetics_Group', y='Benford', data=df, errorbar='sd', capsize=0.1, err_kws={'linewidth': 1.5})
 
 # Oblicz średnią wartość z kolumny Benford dla każdej grupy
 group_means = df.groupby('Esthetics_Group')['Benford'].mean().values
@@ -40,8 +42,8 @@ plt.text(0.511, 0.35, f'R$^2$ = {r2:.3f}', transform=plt.gca().transAxes, fontsi
          color='red', rotation=-21.37)
 
 # Dodaj etykiety i tytuły
-plt.xlabel('$M_{fd}$ k-Means clusters')
-plt.ylabel('$M_{bl}$ (Mean)')
+plt.xlabel('$M_{fd}$ grupy k-Średnich')
+plt.ylabel('$M_{bl}$ (średnia $\pm$ odch. stand.)')
 
 # Pobierz wartości liczbowe (min i max) dla każdego klastra
 cluster_ranges = df.groupby('Esthetics_Group')['Fractal'].agg(['min', 'max']).values
@@ -57,3 +59,4 @@ plt.xticks(ticks=np.unique(df['Esthetics_Group']), labels=xtick_labels)
 
 # Wyświetl wykres
 plt.show()
+
